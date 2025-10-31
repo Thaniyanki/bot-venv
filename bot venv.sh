@@ -3,103 +3,63 @@ set -e
 
 echo "[INFO] Starting bot setup..."
 
-USER_HOME="$HOME"
-BOT_DIR="$USER_HOME/bot"
-VENV_DIR="$BOT_DIR/venv"
+# --- Safe working dir ---
+cd ~ || exit 1
+
+BOT_DIR="$HOME/bot"
 REPORT_FILE="$BOT_DIR/report number"
 
+# --- Remove any old folder safely ---
 if [ -d "$BOT_DIR" ]; then
-  echo "[INFO] Removing existing bot folder safely..."
-  cd ~  # Move out before deleting to avoid getcwd error
+  echo "[INFO] Removing existing bot folder..."
   rm -rf "$BOT_DIR"
 fi
 
-
-mkdir -p "$VENV_DIR"
+# --- Create structure ---
+mkdir -p "$BOT_DIR/venv"
 echo "9940585709" > "$REPORT_FILE"
+echo "[INFO] Folder structure ready."
 
-OS=$(uname -s)
+# --- Detect OS / Architecture ---
+OS_NAME=$(uname -s)
 ARCH=$(uname -m)
-echo "[INFO] Detected OS: $OS  |  Arch: $ARCH"
+echo "[INFO] Detected OS: $OS_NAME | Arch: $ARCH"
 
-# Detect Raspberry Pi OS release name (bullseye/bookworm/trixie etc.)
-if [ -f /etc/os-release ]; then
-  . /etc/os-release
-  OS_RELEASE="$VERSION_CODENAME"
-else
-  OS_RELEASE="unknown"
-fi
-echo "[INFO] OS release: $OS_RELEASE"
+# --- Update packages quietly ---
+sudo apt-get update -y -qq
 
-echo "[INFO] Installing dependencies..."
-sudo apt-get update -qq
+# --- Install core dependencies ---
+sudo apt-get install -y -qq \
+  python3 python3-pip python3-venv wget unzip iputils-ping xclip git \
+  build-essential pkg-config python3-dev libffi-dev libssl-dev \
+  libjpeg-dev zlib1g-dev libopenjp2-7-dev libtiff5-dev libfreetype6-dev \
+  liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev libx11-dev libxext-dev \
+  libxss1 libasound2t64 libgdk-pixbuf-xlib-2.0-0 || true
 
-# Base packages
-sudo apt-get install -y -qq python3 python3-venv python3-pip curl wget unzip git build-essential pkg-config python3-dev libffi-dev libssl-dev libjpeg-dev zlib1g-dev libopenjp2-7-dev libtiff5-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev || true
-
-# Chromium (detect right package name)
+# --- Chromium logic (future proof) ---
 if apt-cache show chromium-browser >/dev/null 2>&1; then
-  sudo apt-get install -y -qq chromium-browser || true
+  sudo apt-get install -y -qq chromium-browser chromium-chromedriver
 elif apt-cache show chromium >/dev/null 2>&1; then
-  sudo apt-get install -y -qq chromium || true
-elif apt-cache show chromium-common >/dev/null 2>&1; then
-  sudo apt-get install -y -qq chromium-common || true
+  sudo apt-get install -y -qq chromium chromium-driver
 else
-  echo "[WARN] Chromium package not found in repo."
+  echo "[WARN] Chromium package not found on this OS."
 fi
 
-# GUI-less (headless) environment setup if needed
-if ! command -v startx >/dev/null 2>&1; then
-  sudo apt-get install -y -qq xvfb x11-utils libxss1 libnss3 || true
-fi
+# --- Create & activate venv ---
+python3 -m venv "$BOT_DIR/venv"
+source "$BOT_DIR/venv/bin/activate"
 
-# Create and activate venv
-python3 -m venv "$VENV_DIR"
-source "$VENV_DIR/bin/activate"
-pip install --upgrade pip setuptools wheel >/dev/null 2>&1
-
-# Python dependencies
-pip install -q \
-  selenium psutil gspread google-auth google-auth-oauthlib google-auth-httplib2 \
-  google-api-python-client google-cloud-storage google-cloud-firestore firebase_admin \
-  pyautogui requests
-
-# Chromium path + version
-CHROMIUM_PATH=$(command -v chromium-browser || command -v chromium || command -v chromium-common)
-if [ -n "$CHROMIUM_PATH" ]; then
-  CHROME_VERSION=$($CHROMIUM_PATH --version | grep -oE "[0-9]+(\.[0-9]+)+")
-  echo "[INFO] Chromium version: $CHROME_VERSION"
-else
-  echo "[WARN] Chromium executable not found."
-fi
-
-# ChromeDriver auto install
-CHROMEDRIVER_DIR="$VENV_DIR/bin"
-mkdir -p "$CHROMEDRIVER_DIR"
-if [ -n "$CHROME_VERSION" ]; then
-  MAJOR_VER=$(echo "$CHROME_VERSION" | cut -d. -f1)
-  DRIVER_JSON_URL="https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
-  DRIVER_VERSION=$(curl -s $DRIVER_JSON_URL | grep -A3 "\"$CHROME_VERSION\"" | grep "version" | head -1 | cut -d'"' -f4)
-  if [ -n "$DRIVER_VERSION" ]; then
-    DRIVER_DL="https://storage.googleapis.com/chrome-for-testing-public/$DRIVER_VERSION/linux64/chromedriver-linux64.zip"
-    wget -q "$DRIVER_DL" -O /tmp/chromedriver.zip || true
-    unzip -oq /tmp/chromedriver.zip -d /tmp/
-    mv /tmp/chromedriver-linux64/chromedriver "$CHROMEDRIVER_DIR/"
-    chmod +x "$CHROMEDRIVER_DIR/chromedriver"
-    rm -rf /tmp/chromedriver*
-    echo "[INFO] ChromeDriver installed inside venv."
-  else
-    echo "[WARN] Could not find ChromeDriver for version $CHROME_VERSION"
-  fi
-fi
+# --- Install Python packages ---
+pip install -q --upgrade pip
+pip install -q firebase-admin selenium gspread oauth2client \
+  python-dateutil Pillow urllib3 psutil pyautogui pyperclip
 
 deactivate
 
 echo "[✅ SETUP COMPLETE]"
 echo "Folders:"
 echo "  $BOT_DIR"
-echo "  $VENV_DIR"
+echo "  $BOT_DIR/venv"
 echo "  $REPORT_FILE (contains: 9940585709)"
-echo "Python packages installed inside: $VENV_DIR"
-echo "[INFO] To activate: source $VENV_DIR/bin/activate"
-echo "------------------------------------------------------------"
+echo "Python packages installed inside: $BOT_DIR/venv"
+echo "[INFO] To activate: source $BOT_DIR/venv/bin/activate"
