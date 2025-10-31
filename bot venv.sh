@@ -3,73 +3,83 @@ set -e
 
 echo "[INFO] Starting bot setup..."
 
-# --- Detect user and home directory ---
 USER_HOME="$HOME"
 BOT_DIR="$USER_HOME/bot"
 VENV_DIR="$BOT_DIR/venv"
 REPORT_FILE="$BOT_DIR/report number"
 
-# --- Clean old installations ---
 if [ -d "$BOT_DIR" ]; then
   echo "[INFO] Removing existing bot folder..."
   rm -rf "$BOT_DIR"
 fi
 
-# --- Recreate structure ---
 mkdir -p "$VENV_DIR"
 echo "9940585709" > "$REPORT_FILE"
 
-# --- Detect OS + architecture ---
 OS=$(uname -s)
 ARCH=$(uname -m)
 echo "[INFO] Detected OS: $OS  |  Arch: $ARCH"
 
-# --- Ensure core packages ---
+# Detect Raspberry Pi OS release name (bullseye/bookworm/trixie etc.)
+if [ -f /etc/os-release ]; then
+  . /etc/os-release
+  OS_RELEASE="$VERSION_CODENAME"
+else
+  OS_RELEASE="unknown"
+fi
+echo "[INFO] OS release: $OS_RELEASE"
+
+echo "[INFO] Installing dependencies..."
 sudo apt-get update -qq
-sudo apt-get install -y -qq python3 python3-venv python3-pip curl wget unzip chromium-browser || \
-sudo apt-get install -y -qq chromium
 
-# --- Create virtual environment ---
+# Base packages
+sudo apt-get install -y -qq python3 python3-venv python3-pip curl wget unzip git build-essential pkg-config python3-dev libffi-dev libssl-dev libjpeg-dev zlib1g-dev libopenjp2-7-dev libtiff5-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev || true
+
+# Chromium (detect right package name)
+if apt-cache show chromium-browser >/dev/null 2>&1; then
+  sudo apt-get install -y -qq chromium-browser || true
+elif apt-cache show chromium >/dev/null 2>&1; then
+  sudo apt-get install -y -qq chromium || true
+elif apt-cache show chromium-common >/dev/null 2>&1; then
+  sudo apt-get install -y -qq chromium-common || true
+else
+  echo "[WARN] Chromium package not found in repo."
+fi
+
+# GUI-less (headless) environment setup if needed
+if ! command -v startx >/dev/null 2>&1; then
+  sudo apt-get install -y -qq xvfb x11-utils libxss1 libnss3 || true
+fi
+
+# Create and activate venv
 python3 -m venv "$VENV_DIR"
-
-# --- Activate venv and install dependencies ---
 source "$VENV_DIR/bin/activate"
 pip install --upgrade pip setuptools wheel >/dev/null 2>&1
 
-# --- Install all Python dependencies (inside venv) ---
-pip install \
-  selenium \
-  psutil \
-  gspread \
-  google-auth \
-  google-auth-oauthlib \
-  google-auth-httplib2 \
-  google-api-python-client \
-  google-cloud-storage \
-  google-cloud-firestore \
-  firebase_admin \
-  pyautogui \
-  requests >/dev/null 2>&1
+# Python dependencies
+pip install -q \
+  selenium psutil gspread google-auth google-auth-oauthlib google-auth-httplib2 \
+  google-api-python-client google-cloud-storage google-cloud-firestore firebase_admin \
+  pyautogui requests
 
-# --- Detect Chromium version ---
-CHROMIUM_PATH=$(command -v chromium-browser || command -v chromium)
-if [ -z "$CHROMIUM_PATH" ]; then
-  echo "[WARN] Chromium not found."
-else
+# Chromium path + version
+CHROMIUM_PATH=$(command -v chromium-browser || command -v chromium || command -v chromium-common)
+if [ -n "$CHROMIUM_PATH" ]; then
   CHROME_VERSION=$($CHROMIUM_PATH --version | grep -oE "[0-9]+(\.[0-9]+)+")
   echo "[INFO] Chromium version: $CHROME_VERSION"
+else
+  echo "[WARN] Chromium executable not found."
 fi
 
-# --- Install matching ChromeDriver ---
+# ChromeDriver auto install
 CHROMEDRIVER_DIR="$VENV_DIR/bin"
-CHROMEDRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public"
-MAJOR_VER=$(echo "$CHROME_VERSION" | cut -d. -f1)
-DRIVER_JSON_URL="https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
-
-if [ -n "$MAJOR_VER" ]; then
+mkdir -p "$CHROMEDRIVER_DIR"
+if [ -n "$CHROME_VERSION" ]; then
+  MAJOR_VER=$(echo "$CHROME_VERSION" | cut -d. -f1)
+  DRIVER_JSON_URL="https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
   DRIVER_VERSION=$(curl -s $DRIVER_JSON_URL | grep -A3 "\"$CHROME_VERSION\"" | grep "version" | head -1 | cut -d'"' -f4)
   if [ -n "$DRIVER_VERSION" ]; then
-    DRIVER_DL="$CHROMEDRIVER_URL/$DRIVER_VERSION/linux64/chromedriver-linux64.zip"
+    DRIVER_DL="https://storage.googleapis.com/chrome-for-testing-public/$DRIVER_VERSION/linux64/chromedriver-linux64.zip"
     wget -q "$DRIVER_DL" -O /tmp/chromedriver.zip || true
     unzip -oq /tmp/chromedriver.zip -d /tmp/
     mv /tmp/chromedriver-linux64/chromedriver "$CHROMEDRIVER_DIR/"
@@ -77,13 +87,12 @@ if [ -n "$MAJOR_VER" ]; then
     rm -rf /tmp/chromedriver*
     echo "[INFO] ChromeDriver installed inside venv."
   else
-    echo "[WARN] Could not match ChromeDriver for version $CHROME_VERSION"
+    echo "[WARN] Could not find ChromeDriver for version $CHROME_VERSION"
   fi
 fi
 
 deactivate
 
-# --- Completion message ---
 echo "[✅ SETUP COMPLETE]"
 echo "Folders:"
 echo "  $BOT_DIR"
