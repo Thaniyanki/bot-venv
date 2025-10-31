@@ -27,7 +27,7 @@ echo "🔄 Updating system packages..."
 sudo apt update && sudo apt upgrade -y
 
 echo "📦 Installing required system packages..."
-sudo apt install -y python3-pip python3-venv wget iputils-ping xclip chromium-browser chromium-chromedriver
+sudo apt install -y python3-pip python3-venv wget iputils-ping xclip chromium chromium-driver
 
 echo "🐍 Creating Python virtual environment..."
 python3 -m venv "$VENV_DIR"
