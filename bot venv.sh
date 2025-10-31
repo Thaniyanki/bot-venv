@@ -12,7 +12,11 @@ echo "📁 Creating bot folder structure..."
 # Create bot and venv folders
 mkdir -p ~/bot/venv
 
+# Create report number file with the specified number
+echo "9940585709" > ~/bot/"report number"
+
 echo "✅ Done!"
-echo "Created folders:"
+echo "Created folders and file:"
 echo "  ~/bot"
 echo "  ~/bot/venv"
+echo "  ~/bot/report number (contains: 9940585709)"
