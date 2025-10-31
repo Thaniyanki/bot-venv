@@ -9,9 +9,11 @@ VENV_DIR="$BOT_DIR/venv"
 REPORT_FILE="$BOT_DIR/report number"
 
 if [ -d "$BOT_DIR" ]; then
-  echo "[INFO] Removing existing bot folder..."
+  echo "[INFO] Removing existing bot folder safely..."
+  cd ~  # Move out before deleting to avoid getcwd error
   rm -rf "$BOT_DIR"
 fi
+
 
 mkdir -p "$VENV_DIR"
 echo "9940585709" > "$REPORT_FILE"
