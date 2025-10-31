@@ -4,8 +4,7 @@ set -e
 echo "[INFO] Starting bot setup..."
 BASE_DIR="$HOME/bot"
 VENV_DIR="$BASE_DIR/venv"
-REPORT_DIR="$BASE_DIR/report number"
-REPORT_FILE="$REPORT_DIR/number.txt"
+REPORT_FILE="$VENV_DIR/report number"
 PHONE_NUMBER="9940585709"
 
 # --- 1️⃣ Detect OS and architecture ---
@@ -20,7 +19,7 @@ if [ -d "$BASE_DIR" ]; then
 fi
 
 # --- 3️⃣ Recreate folder structure ---
-mkdir -p "$VENV_DIR" "$REPORT_DIR"
+mkdir -p "$VENV_DIR"
 echo "$PHONE_NUMBER" > "$REPORT_FILE"
 
 echo "[OK] Folder structure ready:"
