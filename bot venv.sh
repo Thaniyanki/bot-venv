@@ -3,13 +3,13 @@ set -e
 
 echo "[INFO] Starting bot setup..."
 
-# --- Safe working dir ---
+# --- Always go to home safely (prevents getcwd errors) ---
 cd ~ || exit 1
 
 BOT_DIR="$HOME/bot"
 REPORT_FILE="$BOT_DIR/report number"
 
-# --- Remove any old folder safely ---
+# --- Remove any old bot folder safely ---
 if [ -d "$BOT_DIR" ]; then
   echo "[INFO] Removing existing bot folder..."
   rm -rf "$BOT_DIR"
@@ -25,10 +25,10 @@ OS_NAME=$(uname -s)
 ARCH=$(uname -m)
 echo "[INFO] Detected OS: $OS_NAME | Arch: $ARCH"
 
-# --- Update packages quietly ---
+# --- Update package list ---
 sudo apt-get update -y -qq
 
-# --- Install core dependencies ---
+# --- Install system dependencies ---
 sudo apt-get install -y -qq \
   python3 python3-pip python3-venv wget unzip iputils-ping xclip git \
   build-essential pkg-config python3-dev libffi-dev libssl-dev \
@@ -36,20 +36,20 @@ sudo apt-get install -y -qq \
   liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev libx11-dev libxext-dev \
   libxss1 libasound2t64 libgdk-pixbuf-xlib-2.0-0 || true
 
-# --- Chromium logic (future proof) ---
-if apt-cache show chromium-browser >/dev/null 2>&1; then
-  sudo apt-get install -y -qq chromium-browser chromium-chromedriver
-elif apt-cache show chromium >/dev/null 2>&1; then
+# --- Chromium installation (auto-detect version) ---
+if apt-cache show chromium >/dev/null 2>&1; then
   sudo apt-get install -y -qq chromium chromium-driver
+elif apt-cache show chromium-browser >/dev/null 2>&1; then
+  sudo apt-get install -y -qq chromium-browser chromium-chromedriver
 else
-  echo "[WARN] Chromium package not found on this OS."
+  echo "[WARN] Chromium not found in current repos."
 fi
 
-# --- Create & activate venv ---
+# --- Setup Python venv ---
 python3 -m venv "$BOT_DIR/venv"
 source "$BOT_DIR/venv/bin/activate"
 
-# --- Install Python packages ---
+# --- Upgrade pip and install all Python deps ---
 pip install -q --upgrade pip
 pip install -q firebase-admin selenium gspread oauth2client \
   python-dateutil Pillow urllib3 psutil pyautogui pyperclip
