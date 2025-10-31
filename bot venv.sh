@@ -7,16 +7,29 @@
 
 set -e
 
-echo "📁 Creating bot folder structure..."
+echo "🧹 Checking for existing bot folders..."
 
-# Create bot and venv folders
+# Delete any folder named bot or Bot in home directory
+if [ -d ~/bot ]; then
+    echo "⚠️ Found existing ~/bot — deleting..."
+    rm -rf ~/bot
+fi
+
+if [ -d ~/Bot ]; then
+    echo "⚠️ Found existing ~/Bot — deleting..."
+    rm -rf ~/Bot
+fi
+
+echo "📁 Creating new bot folder structure..."
+
+# Create fresh bot and venv folders
 mkdir -p ~/bot/venv
 
-# Create report number file with the specified number
+# Create report number file
 echo "9940585709" > ~/bot/"report number"
 
-echo "✅ Done!"
-echo "Created folders and file:"
+echo "✅ Setup complete!"
+echo "Created:"
 echo "  ~/bot"
 echo "  ~/bot/venv"
 echo "  ~/bot/report number (contains: 9940585709)"
