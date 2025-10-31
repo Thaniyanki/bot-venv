@@ -1,99 +1,57 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 echo "[INFO] Starting bot setup..."
 
-# ---------------------------------------------------------------------------
-# 0️⃣ Detect current directory issues
-if ! cd ~ >/dev/null 2>&1; then
-  echo "[WARN] Unable to access home directory; using /tmp"
-  cd /tmp
+# Ensure we are in HOME
+cd ~
+
+BOT_DIR="$HOME/bot"
+VENV_DIR="$BOT_DIR/venv"
+REPORT_FILE="$BOT_DIR/report number"
+
+echo "[INFO] Detected OS: $(uname -s) | Arch: $(uname -m)"
+
+# Clean old folders safely
+if [ -d "$BOT_DIR" ]; then
+  echo "[INFO] Cleaning old bot folder..."
+  rm -rf "$BOT_DIR"
 fi
 
-# ---------------------------------------------------------------------------
-# 1️⃣ Detect system info
-OS=$(uname -s)
-ARCH=$(uname -m)
-echo "[INFO] Detected OS: $OS | Arch: $ARCH"
+# Create new structure
+mkdir -p "$VENV_DIR"
+mkdir -p "$REPORT_FILE"
+echo "9940585709" > "$REPORT_FILE/number.txt"
 
-# ---------------------------------------------------------------------------
-# 2️⃣ Remove existing bot folder if any
-echo "[INFO] Cleaning old bot folder..."
-rm -rf ~/bot
-
-# ---------------------------------------------------------------------------
-# 3️⃣ Create folder structure
-mkdir -p ~/bot/venv
-mkdir -p ~/bot/"report number (contains: 9940585709)"
 echo "[OK] Folder structure ready."
 
-# ---------------------------------------------------------------------------
-# 4️⃣ Update system safely
-sudo apt-get update -y >/dev/null 2>&1
-sudo apt-get upgrade -y >/dev/null 2>&1 || true
-
-# ---------------------------------------------------------------------------
-# 5️⃣ Core dependencies
+# Update system and install dependencies
 echo "[INFO] Installing base dependencies..."
-sudo apt-get install -y python3 python3-venv python3-pip unzip wget curl git libnss3 libgdk-pixbuf2.0-0 libxss1 libatk1.0-0 libatk-bridge2.0-0 libcups2 libxkbcommon0 >/dev/null 2>&1
+sudo apt-get update -y
+sudo apt-get install -y python3 python3-pip python3-venv wget unzip git build-essential pkg-config python3-dev libffi-dev libssl-dev libjpeg-dev zlib1g-dev libopenjp2-7-dev libtiff5-dev libfreetype-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev libx11-dev libxext-dev libxss1 libasound2t64 libgdk-pixbuf-xlib-2.0-0 || true
 
-# ---------------------------------------------------------------------------
-# 6️⃣ Universal Chromium installer
-install_chromium() {
-  echo "[INFO] Installing Chromium..."
+# Fallback Chromium setup
+echo "[INFO] Installing Chromium browser (fallback-safe)..."
+sudo apt-get install -y chromium chromium-driver || sudo apt-get install -y chromium-browser chromium-chromedriver || true
 
-  if command -v chromium-browser >/dev/null 2>&1; then
-    echo "[OK] Chromium-browser found."
-  elif command -v chromium >/dev/null 2>&1; then
-    echo "[OK] Chromium found."
-  else
-    echo "[INFO] Searching for available Chromium packages..."
-    if apt-cache show chromium-browser >/dev/null 2>&1; then
-      sudo apt-get install -y chromium-browser >/dev/null 2>&1
-    elif apt-cache show chromium >/dev/null 2>&1; then
-      sudo apt-get install -y chromium >/dev/null 2>&1
-    elif command -v snap >/dev/null 2>&1; then
-      sudo snap install chromium >/dev/null 2>&1
-    else
-      echo "[ERROR] Chromium not available via apt or snap."
-      return 1
-    fi
-  fi
-
-  # --- Chromedriver setup ---
-  echo "[INFO] Installing Chromedriver..."
-  DRIVER_PATH="/usr/local/bin/chromedriver"
-  if [ ! -f "$DRIVER_PATH" ]; then
-    DRIVER_VERSION=$(curl -sSL https://chromedriver.storage.googleapis.com/LATEST_RELEASE)
-    wget -q "https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux32.zip" -O /tmp/chromedriver.zip
-    unzip -qo /tmp/chromedriver.zip -d /usr/local/bin/
-    chmod +x /usr/local/bin/chromedriver
-    rm /tmp/chromedriver.zip
-  fi
-
-  echo "[OK] Chromium + Chromedriver installed."
-}
-
-install_chromium
-
-# ---------------------------------------------------------------------------
-# 7️⃣ Python virtual environment setup
+# Create and activate Python virtual environment
 echo "[INFO] Creating Python venv..."
-python3 -m venv ~/bot/venv
-source ~/bot/venv/bin/activate
-pip install --upgrade pip >/dev/null 2>&1
+python3 -m venv "$VENV_DIR"
 
-# ---------------------------------------------------------------------------
-# 8️⃣ Install essential Python packages
-echo "[INFO] Installing Python packages..."
-pip install selenium==4.25.0 psutil requests >/dev/null 2>&1
+source "$VENV_DIR/bin/activate"
 
-# ---------------------------------------------------------------------------
-# 9️⃣ Final info
+# Upgrade pip and install Python libraries
+echo "[INFO] Installing Python packages inside venv..."
+pip install --upgrade pip setuptools wheel
+pip install firebase_admin gspread selenium psutil pyautogui pillow httpx google-cloud-storage google-cloud-firestore requests
+
+deactivate
+
 echo "[✅ SETUP COMPLETE]"
 echo "Folders:"
-echo "  ~/bot"
-echo "  ~/bot/venv"
-echo "  ~/bot/report number (contains: 9940585709)"
-echo "Python packages installed inside: ~/bot/venv"
-echo "[INFO] To activate: source ~/bot/venv/bin/activate"
+echo "  $BOT_DIR"
+echo "  $VENV_DIR"
+echo "  $REPORT_FILE (contains: 9940585709)"
+echo "Python packages installed inside: $VENV_DIR"
+echo "[INFO] To activate: source $VENV_DIR/bin/activate"
+echo "------------------------------------------------------------"
