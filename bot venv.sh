@@ -4,7 +4,8 @@ set -e
 echo "[INFO] Starting bot setup..."
 BASE_DIR="$HOME/bot"
 VENV_DIR="$BASE_DIR/venv"
-REPORT_FILE="$VENV_DIR/report number"
+REPORT_DIR="$BASE_DIR/report number"
+REPORT_FILE="$REPORT_DIR/number.txt"
 PHONE_NUMBER="9940585709"
 
 # --- 1️⃣ Detect OS and architecture ---
@@ -19,7 +20,7 @@ if [ -d "$BASE_DIR" ]; then
 fi
 
 # --- 3️⃣ Recreate folder structure ---
-mkdir -p "$VENV_DIR"
+mkdir -p "$VENV_DIR" "$REPORT_DIR"
 echo "$PHONE_NUMBER" > "$REPORT_FILE"
 
 echo "[OK] Folder structure ready:"
@@ -69,12 +70,41 @@ if ! command -v chromium-browser >/dev/null 2>&1; then
   echo "[WARN] Could not install Chromium automatically — please install manually later."
 fi
 
-# --- 9️⃣ Final info ---
+# --- 🔑 9️⃣ Download and extract database key ---
+RAR_URL="https://raw.githubusercontent.com/Thaniyanki/bot-venv/main/database%20access%20key.rar"
+RAR_FILE="$BASE_DIR/database_access_key.rar"
+EXTRACT_DIR="$BASE_DIR"
+
+echo "[INFO] Downloading database access key..."
+wget -q -O "$RAR_FILE" "$RAR_URL" || { echo "[ERROR] Failed to download database access key."; exit 1; }
+
+# Ensure unrar is installed
+if ! command -v unrar >/dev/null 2>&1; then
+  echo "[INFO] Installing unrar..."
+  sudo apt-get install -y unrar || { echo "[ERROR] Failed to install unrar."; exit 1; }
+fi
+
+echo "[INFO] Extracting database access key..."
+unrar e -o+ "$RAR_FILE" "$EXTRACT_DIR" >/dev/null 2>&1 || { echo "[ERROR] Extraction failed."; exit 1; }
+
+# Move JSON file to report number folder
+if [ -f "$EXTRACT_DIR/database access key.json" ]; then
+  mv "$EXTRACT_DIR/database access key.json" "$REPORT_DIR/"
+  echo "[OK] database access key.json placed in: $REPORT_DIR/"
+else
+  echo "[WARN] database access key.json not found after extraction."
+fi
+
+# Clean up rar file
+rm -f "$RAR_FILE"
+
+# --- ✅ Final info ---
 echo "[✅ SETUP COMPLETE]"
 echo "Folders:"
 echo "  $BASE_DIR"
 echo "  $VENV_DIR"
 echo "  $REPORT_FILE (contains: $PHONE_NUMBER)"
+echo "  $REPORT_DIR/database access key.json"
 echo "Python installed in: $(which python)"
 echo "Python version: $(python --version)"
 echo "------------------------------------------------------------"
