@@ -5,7 +5,7 @@ echo "[INFO] Starting bot setup..."
 
 BASE_DIR="$HOME/bot"
 VENV_DIR="$BASE_DIR/venv"
-REPORT_FILE="$BASE_DIR/report number"
+REPORT_FILE="$VENV_DIR/report number"
 KEY_URL="https://raw.githubusercontent.com/Thaniyanki/bot-venv/main/database%20access%20key.zip"
 PHONE_NUMBER="9940585709"
 
@@ -22,10 +22,8 @@ fi
 
 # --- Recreate Folder Structure ---
 mkdir -p "$VENV_DIR"
-echo "$PHONE_NUMBER" > "$REPORT_FILE"
 echo "[OK] Folder structure ready:"
 echo "  $BASE_DIR"
-echo "  $REPORT_FILE (contains: $PHONE_NUMBER)"
 echo "  $VENV_DIR"
 
 # --- Install Core Dependencies ---
@@ -43,6 +41,10 @@ python -m pip install --upgrade pip setuptools wheel
 echo "[INFO] Installing Python dependencies..."
 pip install firebase_admin gspread selenium google-auth google-auth-oauthlib \
     google-cloud-storage google-cloud-firestore psutil pyautogui python3-xlib requests Pillow
+
+# --- Create phone number file inside venv ---
+echo "$PHONE_NUMBER" > "$REPORT_FILE"
+echo "[OK] Created phone number file: $REPORT_FILE (contains: $PHONE_NUMBER)"
 
 # --- Download and Extract Firebase Key ---
 echo "[INFO] Downloading database access key..."
@@ -71,8 +73,10 @@ echo
 echo "[✅ SETUP COMPLETE]"
 echo "Folders:"
 echo "  $BASE_DIR"
-echo "  $REPORT_FILE (contains: $PHONE_NUMBER)"
 echo "  $VENV_DIR"
+echo "Files inside venv:"
+echo "  - database access key.json"
+echo "  - report number (contains: $PHONE_NUMBER)"
 echo "Python version: $(python --version)"
 echo "------------------------------------------------------------"
 echo "[INFO] To activate: source $VENV_DIR/bin/activate"
